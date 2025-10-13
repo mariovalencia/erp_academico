@@ -1,98 +1,107 @@
 #!/bin/bash
 
-# Script de configuración del entorno de desarrollo ERP
-# UBICACIÓN: Debe estar en la raíz del proyecto, junto a docker-compose.yml
-
-set -e  # Detener ejecución en caso de error
+set -e
 
 echo "🚀 Configurando entorno de desarrollo ERP..."
 echo "=============================================="
-echo "Directorio actual: $(pwd)"
-echo ""
 
 # Verificar que estamos en el directorio correcto
 if [ ! -f "docker-compose.yml" ]; then
-    echo "❌ Error: El script debe ejecutarse desde el directorio raíz del proyecto"
-    echo "   donde se encuentra el archivo docker-compose.yml"
+    echo "❌ Error: Ejecutar desde el directorio raíz del proyecto"
     exit 1
 fi
 
-# Verificar Docker y Docker Compose
-echo "🔍 Verificando dependencias..."
-if ! command -v docker &> /dev/null; then
-    echo "❌ Docker no está instalado. Por favor, instala Docker primero."
-    exit 1
-fi
+# Crear archivos .env si no existen
+create_env_file() {
+    if [ ! -f "$1" ]; then
+        echo "📝 Creando $1..."
+        cat > "$1" << EOF
+$2
+EOF
+    else
+        echo "✅ $1 ya existe"
+    fi
+}
 
-if ! command -v docker-compose &> /dev/null; then
-    echo "❌ Docker Compose no está instalado. Por favor, instálalo primero."
-    exit 1
-fi
+# Crear archivo .env global
+create_env_file ".env" "$(cat << EOF
+# Docker Compose Environment Variables
+PROJECT_NAME=erp-dev
+COMPOSE_PROJECT_NAME=erp_dev
 
-echo "✅ Dependencias verificadas"
+# Database
+POSTGRES_DB=erp_dev
+POSTGRES_USER=erp_user
+POSTGRES_PASSWORD=erp_password_secure_123
+POSTGRES_HOST=database
+POSTGRES_PORT=5432
 
-# Crear estructura de directorios si no existen
-echo "📁 Creando estructura de directorios..."
-mkdir -p backend/src frontend/src database
+# Backend
+BACKEND_PORT=8000
+DJANGO_DEBUG=True
+DJANGO_SECRET_KEY=django-insecure-dev-key-change-in-production
 
-# Verificar archivos esenciales
-if [ ! -f "backend/Dockerfile" ]; then
-    echo "⚠️  Advertencia: backend/Dockerfile no encontrado"
-fi
+# Frontend
+FRONTEND_PORT=4200
+NODE_ENV=development
 
-if [ ! -f "frontend/Dockerfile" ]; then
-    echo "⚠️  Advertencia: frontend/Dockerfile no encontrado"
-fi
+# PGAdmin
+PGADMIN_EMAIL=admin@erp.com
+PGADMIN_PASSWORD=admin_password_secure
 
-# Construir y levantar los contenedores
-echo "📦 Construyendo y levantando contenedores..."
-docker-compose down  # Limpiar contenedores previos
+# Network
+NETWORK_NAME=erp-network
+EOF
+)"
+
+# Crear archivo .env.backend
+create_env_file "backend/.env.backend" "$(cat << EOF
+# Django Backend Environment Variables
+DEBUG=True
+SECRET_KEY=django-insecure-dev-key-change-in-production
+ALLOWED_HOSTS=localhost,127.0.0.1,backend,0.0.0.0
+
+DATABASE_URL=postgresql://erp_user:erp_password_secure_123@database:5432/erp_dev
+DB_ENGINE=django.db.backends.postgresql
+DB_NAME=erp_dev
+DB_USER=erp_user
+DB_PASSWORD=erp_password_secure_123
+DB_HOST=database
+DB_PORT=5432
+
+CORS_ALLOWED_ORIGINS=http://localhost:4200,http://frontend:4200
+CORS_ALLOW_ALL_ORIGINS=True
+CSRF_TRUSTED_ORIGINS=http://localhost:4200,http://frontend:4200
+
+API_VERSION=v1
+API_DEBUG=True
+LOG_LEVEL=DEBUG
+EOF
+)"
+
+# Crear archivo .env.frontend
+create_env_file "frontend/.env.frontend" "$(cat << EOF
+# Angular Frontend Environment Variables
+API_URL=http://localhost:8000/api
+API_BASE_URL=http://backend:8000/api
+API_VERSION=v1
+
+APP_NAME=ERP Development
+APP_VERSION=1.0.0
+NODE_ENV=development
+
+ENABLE_DEBUG=true
+ENABLE_ANALYTICS=false
+
+AUTH_API=http://localhost:8000/auth
+REPORT_API=http://localhost:8000/reports
+EOF
+)"
+
+echo "✅ Archivos de entorno creados/verificados"
+
+# Continuar con la construcción...
+docker-compose down
 docker-compose up --build -d
 
-echo "⏳ Esperando a que los servicios estén listos..."
-# Esperar a que PostgreSQL esté listo
-for i in {1..30}; do
-    if docker-compose exec database pg_isready -U erp_user; then
-        echo "✅ PostgreSQL está listo"
-        break
-    fi
-    echo "⏱️  Esperando a PostgreSQL... ($i/30)"
-    sleep 2
-done
-
-# Esperar a que Backend esté listo
-for i in {1..30}; do
-    if curl -s http://localhost:8000 > /dev/null 2>&1; then
-        echo "✅ Backend está listo"
-        break
-    fi
-    echo "⏱️  Esperando al Backend... ($i/30)"
-    sleep 2
-done
-
-# Verificar estado de los contenedores
-echo "🔍 Verificando estado de los contenedores..."
-docker-compose ps
-
-echo ""
-echo "🎉 ¡Entorno de desarrollo configurado exitosamente!"
-echo ""
-echo "🌐 URLs de acceso:"
-echo "   Frontend (Angular):  http://localhost:4200"
-echo "   Backend (Django):    http://localhost:8000"
-echo "   Database (PostgreSQL): localhost:5432"
-echo "   PGAdmin:             http://localhost:5050"
-echo ""
-echo "📊 Credenciales de base de datos:"
-echo "   Database: erp_dev"
-echo "   User:     erp_user"
-echo "   Password: erp_password"
-echo ""
-echo "🔧 Comandos útiles:"
-echo "   docker-compose logs -f backend      # Ver logs del backend"
-echo "   docker-compose logs -f frontend     # Ver logs del frontend"
-echo "   docker-compose exec backend python manage.py createsuperuser"
-echo "   docker-compose down                 # Detener contenedores"
-echo "   docker-compose restart              # Reiniciar servicios"
-echo ""
-echo "💡 Para detener el entorno: docker-compose down"
+echo "🎉 Entorno listo!"

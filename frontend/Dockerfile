@@ -12,6 +12,9 @@ RUN npm install
 # Copiar código de la aplicación
 COPY . .
 
+# Copiar archivo de entorno específico del frontend
+COPY .env.frontend .env
+
 # Exponer puerto
 EXPOSE 4200
 

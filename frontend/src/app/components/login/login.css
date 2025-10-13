@@ -1,0 +1,57 @@
+.login-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.login-card {
+  background: white;
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  max-width: 400px;
+  width: 100%;
+}
+
+h1 {
+  color: #333;
+  margin-bottom: 5px;
+  font-size: 2em;
+}
+
+.subtitle {
+  color: #666;
+  margin-bottom: 30px;
+}
+
+.login-form h2 {
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.google-button {
+  margin: 25px 0;
+  display: flex;
+  justify-content: center;
+}
+
+.security-info {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 10px;
+  margin-top: 20px;
+}
+
+.security-info p {
+  margin: 0;
+  color: #28a745;
+  font-weight: bold;
+}
+
+.security-info small {
+  color: #6c757d;
+}

@@ -1,4 +1,4 @@
-FROM python:3.14-alpine3.21
+FROM python:3.14-slim
 
 WORKDIR /app
 
@@ -6,7 +6,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
-    postgresql-dev \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar requirements e instalar dependencias Python
@@ -15,6 +15,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copiar código de la aplicación
 COPY . .
+
+# Copiar archivo de entorno específico del backend
+COPY .env.backend .env
 
 # Exponer puerto
 EXPOSE 8000

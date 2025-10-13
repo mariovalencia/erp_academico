@@ -1,0 +1,53 @@
+<div class="login-container">
+  <div class="login-card">
+    <div class="university-header">
+      <div class="university-icon">🏫</div>
+      <h1>ERP Universitario</h1>
+      <p class="subtitle">Sistema de Gestión Académica</p>
+    </div>
+
+    <div class="login-content">
+      <div class="login-form">
+        <h2>Iniciar Sesión</h2>
+        <p class="login-description">Usa tu cuenta de Google universitaria</p>
+
+        <!-- Estado de carga -->
+        @if (isLoading()) {
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Verificando credenciales...</p>
+          </div>
+        }
+
+        <!-- Mensaje de error -->
+        @if (errorMessage()) {
+          <div class="error-state">
+            <span class="error-icon">⚠️</span>
+            <p>{{ errorMessage() }}</p>
+          </div>
+        }
+
+        <!-- Botón de Google -->
+        <div id="googleSignInButton" class="google-button"></div>
+
+        <div class="divider">
+          <span>Acceso Seguro</span>
+        </div>
+
+        <div class="security-info">
+          <div class="security-header">
+            <span class="security-icon">🔒</span>
+            <h3>Sistema Protegido</h3>
+          </div>
+          <p>Tu información académica está segura con:</p>
+          <ul class="security-features">
+            <li>✅ Autenticación Google OAuth2</li>
+            <li>✅ Datos encriptados</li>
+            <li>✅ Acceso por roles</li>
+            <li>✅ Auditoría de accesos</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
