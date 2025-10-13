@@ -1,0 +1,20 @@
+# Dar permisos al script de setup
+chmod +x setup.sh
+
+# Ejecutar el setup
+./setup.sh
+
+# Ver logs en tiempo real
+docker-compose logs -f backend
+
+# Ejecutar comandos en el contenedor del backend
+docker-compose exec backend python manage.py createsuperuser
+
+# Detener todos los servicios
+docker-compose down
+
+# Reconstruir imágenes
+docker-compose build --no-cache
+
+# Backup de base de datos
+docker-compose exec database pg_dump -U erp_user erp_dev > backup.sql

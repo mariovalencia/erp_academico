@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # Backend - Python 3.14
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: erp-backend
+    volumes:
+      - ./backend:/app
+      - backend_data:/app/data
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://erp_user:erp_password@database:5432/erp_dev
+      - DEBUG=True
+      - SECRET_KEY=your-secret-key-here
+    depends_on:
+      - database
+    networks:
+      - erp-network
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+
+  # Frontend - Angular 20
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: erp-frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "4200:4200"
+    environment:
+      - API_URL=http://localhost:8000/api
+      - NODE_ENV=development
+    depends_on:
+      - backend
+    networks:
+      - erp-network
+    command: npm start
+
+  # Database - PostgreSQL 17
+  database:
+    image: postgres:17
+    container_name: erp-database
+    environment:
+      - POSTGRES_DB=erp_dev
+      - POSTGRES_USER=erp_user
+      - POSTGRES_PASSWORD=erp_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - erp-network
+
+  # PGAdmin (Opcional)
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: erp-pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@erp.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - database
+    networks:
+      - erp-network
+
+volumes:
+  postgres_data:
+  backend_data:
+
+networks:
+  erp-network:
+    driver: bridge
