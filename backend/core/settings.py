@@ -12,9 +12,21 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+env_path = BASE_DIR / '.env.backend'
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
+    print("✅ .env.backend cargado correctamente desde:", env_path)
+else:
+    print("❌ No se encontró .env en:", env_path)
+
+# Debug: Verificar variables
+print("GOOGLE_CLIENT_ID:", os.getenv('GOOGLE_CLIENT_ID', 'NO_CONFIGURADO'))
+print("GOOGLE_CLIENT_SECRET existe:", bool(os.getenv('GOOGLE_CLIENT_SECRET')))
 
 
 # Quick-start development settings - unsuitable for production
@@ -65,8 +77,8 @@ ACCOUNT_EMAIL_VERIFICATION = 'optional'
 LOGIN_REDIRECT_URL = '/'
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -122,6 +134,9 @@ REST_FRAMEWORK = {
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:4200",
+    "http://127.0.0.1:4200",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
 ]
 
 # Configuración de AllAuth para Google
@@ -143,13 +158,20 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 # Solo login con Google (más seguro para empezar)
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
+ACCOUNT_LOGIN_METHODS = {'email'}
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
 SOCIALACCOUNT_EMAIL_REQUIRED = True
 SOCIALACCOUNT_QUERY_EMAIL = True
+
+# Para desarrollo, puedes desactivar la verificación de email
+if DEBUG:
+    ACCOUNT_EMAIL_VERIFICATION = 'none'
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+    # Configurar backend de email real para producción
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

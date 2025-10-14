@@ -54,14 +54,28 @@ export class LoginComponent implements OnInit {
     }
 
     try {
+      console.log('🔐 Initializing Google Sign-In with Client ID:', environment.googleClientId);
       google.accounts.id.initialize({
         client_id: environment.googleClientId,
         callback: (response: any) => this.handleGoogleSignIn(response),
         auto_select: false,
-        cancel_on_tap_outside: true
+        cancel_on_tap_outside: true,
+        ux_mode: 'popup',
+        itp_support: true
       });
 
-      google.accounts.id.renderButton(
+      this.initializeGoogleOAuth2();
+
+
+
+    } catch (error) {
+      console.error('Error initializing Google Sign-In:', error);
+      this.errorMessage.set('Error al inicializar Google Sign-In');
+    }
+  }
+
+  private initializeGoogleOAuth2(): void {
+    google.accounts.id.renderButton(
         document.getElementById('googleSignInButton'),
         {
           theme: 'outline',
@@ -69,16 +83,13 @@ export class LoginComponent implements OnInit {
           width: 280,
           text: 'continue_with',
           shape: 'rectangular',
-          logo_alignment: 'center'
+          logo_alignment: 'center',
+          type: 'standard',
+          scope: 'profile email openid'
         }
       );
 
       console.log('Google Sign-In initialized successfully');
-
-    } catch (error) {
-      console.error('Error initializing Google Sign-In:', error);
-      this.errorMessage.set('Error al inicializar Google Sign-In');
-    }
   }
 
   private async handleGoogleSignIn(response: any): Promise<void> {

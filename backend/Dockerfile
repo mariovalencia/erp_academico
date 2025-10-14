@@ -17,7 +17,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Copiar archivo de entorno específico del backend
-COPY .env.backend .env
+COPY .env.backend .env.backend
 
 # Exponer puerto
 EXPOSE 8000

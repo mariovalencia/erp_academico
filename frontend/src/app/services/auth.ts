@@ -38,10 +38,15 @@ export class AuthService {
   }
 
   loginWithGoogle(googleToken: string): Observable<AuthResponse> {
+    console.log('Enviando token a nuestro endpoint personalizado');
+    console.log('🔐 [FRONTEND] Enviando token a backend:', googleToken);
+    console.log('🔐 [FRONTEND] URL:', `${this.apiUrl}/auth/google/`);
+
     return this.http.post<AuthResponse>(`${this.apiUrl}/auth/google/`, {
       access_token: googleToken
     }).pipe(
       tap(response => {
+        console.log('Respuesta de nuestra API:', response);
         this.setAuthState(response.key, response.user);
       })
     );
