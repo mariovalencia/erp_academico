@@ -14,148 +14,129 @@ import json
 @csrf_exempt
 def google_login(request):
     """
-    Login con Google - Endpoint personalizado
+    Login con Google - Soporta JWT y Access Token
     """
     try:
         print("🔐 [BACKEND] === INICIANDO GOOGLE LOGIN ===")
-        print(f"🔐 [BACKEND] Método: {request.method}")
-        print(f"🔐 [BACKEND] Headers: {dict(request.headers)}")
         
-        # Verificar el body
-        body_content = request.body.decode('utf-8') if request.body else 'EMPTY'
-        print(f"🔐 [BACKEND] Body contenido: {body_content}")
-        
-        # Intentar parsear el JSON de diferentes formas
-        access_token = None
-        try:
-            if request.body:
-                body_data = json.loads(request.body)
-                access_token = body_data.get('access_token')
-                print(f"🔐 [BACKEND] Token desde request.body: {access_token[:30] if access_token else 'NONE'}...")
-        except json.JSONDecodeError as e:
-            print(f"❌ [BACKEND] Error parseando request.body: {e}")
-        
-        # Intentar desde request.data
-        if not access_token and hasattr(request, 'data'):
-            access_token = request.data.get('access_token')
-            print(f"🔐 [BACKEND] Token desde request.data: {access_token[:30] if access_token else 'NONE'}...")
-        
-        print(f"🔐 [BACKEND] Access token final: {access_token}")
+        access_token = request.data.get('access_token')
+        print(f"🔐 [BACKEND] Token recibido: {access_token[:50] if access_token else 'NONE'}...")
         
         if not access_token:
-            print("❌ [BACKEND] No se recibió access_token")
             return Response(
                 {'error': 'access_token es requerido'}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # DETERMINAR el tipo de token
+        is_jwt = access_token.startswith('eyJ')  # Los JWT empiezan con eyJ
+        
+        if is_jwt:
+            print("🔐 [BACKEND] Token detectado como JWT")
+            return handle_jwt_token(access_token)
+        else:
+            print("🔐 [BACKEND] Token detectado como Access Token")
+            return handle_access_token(access_token)
+        
+    except Exception as e:
+        print(f"❌ [BACKEND] Error en google_login: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response(
+            {'error': f'Error en autenticación: {str(e)}'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+def handle_access_token(access_token: str):
+    """Manejar Access Token de OAuth2"""
+    try:
         # Verificar el token con Google
-        print("🌐 [BACKEND] Verificando token con Google...")
-        try:
-            google_response = requests.get(
-                'https://www.googleapis.com/oauth2/v3/userinfo',
-                params={'access_token': access_token},
-                timeout=10
-            )
-            
-            print(f"📡 [BACKEND] Respuesta de Google - Status: {google_response.status_code}")
-            print(f"📡 [BACKEND] Respuesta de Google - Headers: {dict(google_response.headers)}")
-            
-            if google_response.status_code != 200:
-                print(f"❌ [BACKEND] Token inválido. Error: {google_response.text}")
-                return Response(
-                    {'error': f'Token de Google inválido: {google_response.text}'}, 
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            google_data = google_response.json()
-            print(f"✅ [BACKEND] Datos de Google: {google_data}")
-            
-        except requests.exceptions.RequestException as e:
-            print(f"❌ [BACKEND] Error en petición a Google: {e}")
+        google_response = requests.get(
+            'https://www.googleapis.com/oauth2/v3/userinfo',
+            headers={'Authorization': f'Bearer {access_token}'},
+            timeout=10
+        )
+        
+        print(f"📡 [BACKEND] Respuesta de Google: {google_response.status_code}")
+        
+        if google_response.status_code != 200:
             return Response(
-                {'error': f'Error conectando con Google: {str(e)}'}, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-        
-        email = google_data.get('email')
-        first_name = google_data.get('given_name', '')
-        last_name = google_data.get('family_name', '')
-        picture = google_data.get('picture', '')
-        
-        print(f"✅ [BACKEND] Usuario Google - Email: {email}, Nombre: {first_name} {last_name}")
-        
-        if not email:
-            print("❌ [BACKEND] No se pudo obtener el email de Google")
-            return Response(
-                {'error': 'No se pudo obtener el email de Google'}, 
+                {'error': f'Token de Google inválido: {google_response.text}'}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Buscar o crear usuario
-        from django.contrib.auth.models import User
-        from rest_framework.authtoken.models import Token
-        
-        print(f"👤 [BACKEND] Buscando/creando usuario: {email}")
-        
-        try:
-            user, created = User.objects.get_or_create(
-                username=email,
-                defaults={
-                    'email': email,
-                    'first_name': first_name,
-                    'last_name': last_name,
-                    'is_active': True
-                }
-            )
-            
-            # Actualizar información si el usuario ya existe
-            if not created:
-                user.first_name = first_name
-                user.last_name = last_name
-                user.save()
-                print(f"✅ [BACKEND] Usuario actualizado: {user.email}")
-            else:
-                print(f"✅ [BACKEND] Usuario creado: {user.email}")
-            
-            # Crear o obtener token
-            token, _ = Token.objects.get_or_create(user=user)
-            
-            print(f"✅ [BACKEND] Token generado: {token.key}")
-            
-            response_data = {
-                'key': token.key,
-                'user': {
-                    'id': user.id,
-                    'email': user.email,
-                    'first_name': user.first_name,
-                    'last_name': user.last_name,
-                    'username': user.username,
-                    'picture': picture
-                }
-            }
-            
-            print(f"✅ [BACKEND] === LOGIN EXITOSO ===")
-            print(f"✅ [BACKEND] Enviando respuesta: {response_data}")
-            
-            return Response(response_data)
-            
-        except Exception as user_error:
-            print(f"❌ [BACKEND] Error con usuario/token: {user_error}")
-            import traceback
-            traceback.print_exc()
-            return Response(
-                {'error': f'Error creando usuario: {str(user_error)}'}, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        google_data = google_response.json()
+        return create_or_get_user(google_data)
         
     except Exception as e:
-        print("❌ [BACKEND] === ERROR GENERAL ===")
-        print(f"❌ [BACKEND] Error: {str(e)}")
-        import traceback
-        print("❌ [BACKEND] Traceback:")
-        traceback.print_exc()
+        print(f"❌ [BACKEND] Error con access token: {str(e)}")
         return Response(
-            {'error': f'Error interno del servidor: {str(e)}'}, 
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {'error': f'Error verificando token: {str(e)}'}, 
+            status=status.HTTP_400_BAD_REQUEST
         )
+
+def handle_jwt_token(jwt_token: str):
+    """Manejar JWT Token de Google Sign-In"""
+    try:
+        # Verificar JWT con Google
+        google_response = requests.get(
+            'https://oauth2.googleapis.com/tokeninfo',
+            params={'id_token': jwt_token},
+            timeout=10
+        )
+        
+        print(f"📡 [BACKEND] Respuesta de Google JWT: {google_response.status_code}")
+        
+        if google_response.status_code != 200:
+            return Response(
+                {'error': f'JWT de Google inválido: {google_response.text}'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        google_data = google_response.json()
+        return create_or_get_user(google_data)
+        
+    except Exception as e:
+        print(f"❌ [BACKEND] Error con JWT: {str(e)}")
+        return Response(
+            {'error': f'Error verificando JWT: {str(e)}'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+def create_or_get_user(google_data: dict):
+    """Crear o obtener usuario basado en datos de Google"""
+    email = google_data.get('email')
+    
+    if not email:
+        return Response(
+            {'error': 'No se pudo obtener el email de Google'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    from django.contrib.auth.models import User
+    from rest_framework.authtoken.models import Token
+    
+    user, created = User.objects.get_or_create(
+        username=email,
+        defaults={
+            'email': email,
+            'first_name': google_data.get('given_name', ''),
+            'last_name': google_data.get('family_name', ''),
+            'is_active': True
+        }
+    )
+    
+    token, _ = Token.objects.get_or_create(user=user)
+    
+    print(f"✅ [BACKEND] Login exitoso para: {email}")
+    
+    return Response({
+        'key': token.key,
+        'user': {
+            'id': user.id,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'username': user.username
+        }
+    })

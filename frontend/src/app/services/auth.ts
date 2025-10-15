@@ -3,9 +3,6 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 
-// Declarar google para TypeScript
-declare var google: any;
-
 interface User {
   id: number;
   email: string;
@@ -38,7 +35,6 @@ export class AuthService {
   }
 
   loginWithGoogle(googleToken: string): Observable<AuthResponse> {
-    console.log('Enviando token a nuestro endpoint personalizado');
     console.log('🔐 [FRONTEND] Enviando token a backend:', googleToken);
     console.log('🔐 [FRONTEND] URL:', `${this.apiUrl}/auth/google/`);
 
@@ -46,51 +42,52 @@ export class AuthService {
       access_token: googleToken
     }).pipe(
       tap(response => {
-        console.log('Respuesta de nuestra API:', response);
-        this.setAuthState(response.key, response.user);
+        console.log('✅ [FRONTEND] Respuesta del backend:', response);
+        this.setAuthToken(response.key, response.user);
       })
     );
   }
 
-  private setAuthState(token: string, user: User): void {
+  // 🔥 MÉTODO QUE FALTABA
+  setAuthToken(token: string, user: User): void {
+    console.log('🔐 [FRONTEND] Guardando token y usuario');
+
+    // Actualizar signals
     this.authToken.set(token);
     this.currentUser.set(user);
 
+    // Persistir en localStorage
     localStorage.setItem('authToken', token);
     localStorage.setItem('currentUser', JSON.stringify(user));
 
-    console.log('Auth state updated:', user.email);
+    console.log('✅ [FRONTEND] Auth state actualizado:', user.email);
   }
 
   logout(): void {
+    console.log('🔐 [FRONTEND] Cerrando sesión');
+
+    // Limpiar signals
     this.authToken.set(null);
     this.currentUser.set(null);
 
+    // Limpiar localStorage
     localStorage.removeItem('authToken');
     localStorage.removeItem('currentUser');
 
-    // 🔹 CORRECCIÓN: Verificar si google existe de forma segura
+    // Cerrar sesión de Google
     this.revokeGoogleSession();
 
-    console.log('User logged out');
+    console.log('✅ [FRONTEND] Sesión cerrada');
   }
 
   private revokeGoogleSession(): void {
-    // Verificar si el objeto google existe de forma segura
     if (typeof window !== 'undefined' && (window as any).google) {
       try {
         const google = (window as any).google;
         google.accounts.id.disableAutoSelect();
-
-        // Opcional: revocar sesión específica
-        const userEmail = this.userEmail();
-        if (userEmail) {
-          google.accounts.id.revoke(userEmail, (done: any) => {
-            console.log('Google session revoked for:', userEmail);
-          });
-        }
+        console.log('✅ [FRONTEND] Sesión de Google revocada');
       } catch (error) {
-        console.warn('Error revoking Google session:', error);
+        console.warn('⚠️ [FRONTEND] Error revocando sesión de Google:', error);
       }
     }
   }
@@ -106,5 +103,25 @@ export class AuthService {
 
   private getStoredToken(): string | null {
     return localStorage.getItem('authToken');
+  }
+
+  // 🔥 MÉTODOS ADICIONALES ÚTILES
+  getAuthHeaders(): { [header: string]: string } {
+    const token = this.getToken();
+    return token ? { 'Authorization': `Token ${token}` } : {};
+  }
+
+  clearAuth(): void {
+    this.logout();
+  }
+
+  // Para debugging
+  printAuthState(): void {
+    console.log('🔐 [FRONTEND] Estado de autenticación:');
+    console.log('  - isLoggedIn:', this.isLoggedIn());
+    console.log('  - user:', this.user());
+    console.log('  - token:', this.getToken()?.substring(0, 20) + '...');
+    console.log('  - localStorage token:', !!localStorage.getItem('authToken'));
+    console.log('  - localStorage user:', !!localStorage.getItem('currentUser'));
   }
 }
