@@ -31,18 +31,18 @@ export class AuthService {
   public userEmail = computed(() => this.currentUser()?.email || '');
 
   constructor() {
-    console.log('AuthService initialized with Signals');
+    //console.log('AuthService initialized with Signals');
   }
 
   loginWithGoogle(googleToken: string): Observable<AuthResponse> {
-    console.log('🔐 [FRONTEND] Enviando token a backend:', googleToken);
-    console.log('🔐 [FRONTEND] URL:', `${this.apiUrl}/auth/google/`);
+    //console.log('🔐 [FRONTEND] Enviando token a backend:', googleToken);
+    //console.log('🔐 [FRONTEND] URL:', `${this.apiUrl}/auth/google/`);
 
     return this.http.post<AuthResponse>(`${this.apiUrl}/auth/google/`, {
       access_token: googleToken
     }).pipe(
       tap(response => {
-        console.log('✅ [FRONTEND] Respuesta del backend:', response);
+        //console.log('✅ [FRONTEND] Respuesta del backend:', response);
         this.setAuthToken(response.key, response.user);
       })
     );
@@ -50,7 +50,7 @@ export class AuthService {
 
   // 🔥 MÉTODO QUE FALTABA
   setAuthToken(token: string, user: User): void {
-    console.log('🔐 [FRONTEND] Guardando token y usuario');
+    //console.log('🔐 [FRONTEND] Guardando token y usuario');
 
     // Actualizar signals
     this.authToken.set(token);
@@ -60,7 +60,7 @@ export class AuthService {
     localStorage.setItem('authToken', token);
     localStorage.setItem('currentUser', JSON.stringify(user));
 
-    console.log('✅ [FRONTEND] Auth state actualizado:', user.email);
+    //console.log('✅ [FRONTEND] Auth state actualizado:', user.email);
   }
 
   logout(): void {

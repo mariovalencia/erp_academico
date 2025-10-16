@@ -29,7 +29,7 @@ export class LoginComponent implements OnInit {
     script.async = true;
     script.defer = true;
     script.onload = () => {
-      console.log('✅ Google Identity Services cargado');
+      //console.log('✅ Google Identity Services cargado');
       this.initializeGoogleSignIn();
     };
     script.onerror = () => {
@@ -41,7 +41,7 @@ export class LoginComponent implements OnInit {
 
   private initializeGoogleSignIn(): void {
     try {
-      console.log('🔐 Inicializando Google Sign-In con Client ID:', environment.googleClientId);
+      //console.log('🔐 Inicializando Google Sign-In con Client ID:', environment.googleClientId);
 
       // 🔥 CONFIGURACIÓN CORRECTA para obtener Access Token
       google.accounts.id.initialize({
@@ -65,7 +65,7 @@ export class LoginComponent implements OnInit {
         }
       );
 
-      console.log('✅ Google Sign-In inicializado correctamente');
+      //console.log('✅ Google Sign-In inicializado correctamente');
 
     } catch (error) {
       console.error('❌ Error inicializando Google Sign-In:', error);
@@ -87,7 +87,7 @@ export class LoginComponent implements OnInit {
         scope: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
         callback: async (response: any) => {
           if (response.access_token) {
-            console.log('✅ Access Token obtenido:', response.access_token.substring(0, 50) + '...');
+            //console.log('✅ Access Token obtenido:', response.access_token.substring(0, 50) + '...');
             await this.sendTokenToBackend(response.access_token);
           } else {
             console.error('❌ No se pudo obtener access token');
@@ -117,12 +117,12 @@ export class LoginComponent implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
-    console.log('🔐 Respuesta de Google (JWT):', response);
+    //console.log('🔐 Respuesta de Google (JWT):', response);
 
     try {
       // El JWT está en response.credential
       const jwtToken = response.credential;
-      console.log('🔐 JWT Token:', jwtToken.substring(0, 50) + '...');
+      //console.log('🔐 JWT Token:', jwtToken.substring(0, 50) + '...');
 
       // 🔥 PRUEBA: Intentar usar el JWT directamente
       const loginResult: any = await this.authService.loginWithGoogle(jwtToken).toPromise();
@@ -130,7 +130,7 @@ export class LoginComponent implements OnInit {
       if (loginResult?.key) {
         this.authService.setAuthToken(loginResult.key, loginResult.user);
         this.showSuccessMessage();
-        console.log('✅ Login exitoso con JWT');
+        //console.log('✅ Login exitoso con JWT');
       } else {
         throw new Error('Respuesta inválida del servidor');
       }
@@ -145,7 +145,7 @@ export class LoginComponent implements OnInit {
 
   private async sendTokenToBackend(accessToken: string): Promise<void> {
     try {
-      console.log('🔐 Enviando Access Token al backend...');
+      //console.log('🔐 Enviando Access Token al backend...');
 
       const loginResult: any = await this.authService.loginWithGoogle(accessToken).toPromise();
 
