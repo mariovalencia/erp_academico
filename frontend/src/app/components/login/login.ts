@@ -28,7 +28,7 @@ export class LoginComponent implements OnInit {
     this.route.queryParams.subscribe(params => {
       if (params['returnUrl']) {
         this.returnUrl.set(params['returnUrl']);
-        console.log('🔐 URL de retorno:', params['returnUrl']);
+        //console.log('🔐 URL de retorno:', params['returnUrl']);
       }
     });
     this.loadGoogleOAuthScript();
@@ -75,7 +75,7 @@ export class LoginComponent implements OnInit {
         }
       );
 
-      console.log('✅ Google Sign-In inicializado correctamente');
+      //console.log('✅ Google Sign-In inicializado correctamente');
 
     } catch (error) {
       console.error('❌ Error inicializando Google Sign-In:', error);
@@ -96,7 +96,7 @@ export class LoginComponent implements OnInit {
     const jwtToken = response.credential;
     
     try {
-      console.log('🔐 Enviando JWT al backend para verificación...');
+      //console.log('🔐 Enviando JWT al backend para verificación...');
 
       const loginResult = await lastValueFrom(this.authService.loginWithGoogle(jwtToken));
 
@@ -116,7 +116,7 @@ export class LoginComponent implements OnInit {
   }
 
   private handleSuccessfulLogin(): void {
-    console.log('✅ Autenticación exitosa, redirigiendo a:', this.returnUrl());
+    //console.log('✅ Autenticación exitosa, redirigiendo a:', this.returnUrl());
     
     // Redirigir a la URL guardada o al dashboard por defecto
     this.router.navigateByUrl(this.returnUrl());

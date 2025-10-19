@@ -42,7 +42,7 @@ export class AuthService {
     
     // Verificar si existe token
     if (!token) {
-      console.log('🔐 No hay token en memoria');
+      //console.log('🔐 No hay token en memoria');
       return false;
     }
 
@@ -59,7 +59,7 @@ export class AuthService {
     //   return false;
     // }
 
-    console.log('🔐 Usuario autenticado correctamente');
+    //console.log('🔐 Usuario autenticado correctamente');
     return true;
   }
 
@@ -70,20 +70,20 @@ export class AuthService {
     const token = localStorage.getItem('authToken');
     const userData = localStorage.getItem('userData');
     
-    console.log('🔐 Inicializando estado de autenticación...');
+    //console.log('🔐 Inicializando estado de autenticación...');
 
     if (token && userData) {
       try {
         const user = JSON.parse(userData);
         this.authToken.set(token);
         this.currentUser.set(user);
-        console.log('✅ Estado de autenticación restaurado:', user.email);
+        //console.log('✅ Estado de autenticación restaurado:', user.email);
       } catch (error) {
         console.error('❌ Error parseando userData:', error);
         this.clearAuthData();
       }
     } else {
-      console.log('🔐 No hay datos de autenticación persistentes');
+      //console.log('🔐 No hay datos de autenticación persistentes');
     }
   }
 
@@ -95,11 +95,11 @@ export class AuthService {
     const headers = new HttpHeaders({
       'Content-Type': 'application/json'
     });
-    console.log('🔐 Enviando JWT al backend...', {
+    /*console.log('🔐 Enviando JWT al backend...', {
     token: jwtToken,
     tokenLength: jwtToken.length,
     first50Chars: jwtToken.substring(0, 50)
-    });
+    });*/
 
     return this.http.post<AuthResponse>(
       `${this.apiUrl}/auth/google/`, 
@@ -107,8 +107,8 @@ export class AuthService {
       { headers }
     ).pipe(
       tap(response => {
-        console.log('✅ Respuesta del backend:', response)
-        console.log('✅ Login exitoso, estableciendo token...');
+        //console.log('✅ Respuesta del backend:', response)
+        //console.log('✅ Login exitoso, estableciendo token...');
         this.setAuthToken(response.key, response.user);
       }),
       catchError(error => {
@@ -136,7 +136,7 @@ export class AuthService {
     this.authToken.set(token);
     this.currentUser.set(user);
 
-    console.log('✅ Token establecido para usuario:', user.email);
+    //console.log('✅ Token establecido para usuario:', user.email);
   }
 
   /**
@@ -144,7 +144,7 @@ export class AuthService {
    */
 
   logout(): void {
-    console.log('🔐 Cerrando sesión...');
+    //console.log('🔐 Cerrando sesión...');
     
     const userEmail = this.currentUser()?.email;
 
@@ -154,13 +154,13 @@ export class AuthService {
     if (window.google?.accounts?.id) {
       if (userEmail) {
         google.accounts.id.revoke(userEmail, (done: any) => {
-          console.log('✅ Sesión de Google revocada');
+          //console.log('✅ Sesión de Google revocada');
         });
       }
       google.accounts.id.disableAutoSelect();
     }
 
-    console.log('✅ Sesión cerrada completamente');
+    //console.log('✅ Sesión cerrada completamente');
 
   }
 

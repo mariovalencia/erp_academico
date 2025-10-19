@@ -13,7 +13,7 @@ export class AppComponent implements OnInit {
 
   ngOnInit(): void {
     // Inicializar estado de autenticación al cargar la app
-    console.log('🚀 Inicializando aplicación...');
+    //console.log('🚀 Inicializando aplicación...');
     this.authService.initializeAuthState();
   }
 }

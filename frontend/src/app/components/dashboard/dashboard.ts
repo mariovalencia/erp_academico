@@ -60,7 +60,7 @@ export class DashboardComponent implements OnInit {
     this.currentUser.set(user);
     this.isLoading.set(false);
     
-    console.log('✅ Dashboard inicializado para:', user.email);
+    //console.log('✅ Dashboard inicializado para:', user.email);
   }
 
   toggleSidebar(): void {
