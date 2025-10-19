@@ -1,14 +1,17 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { Injectable, inject, signal } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Observable, tap, catchError, of } from 'rxjs';
 import { environment } from '../../environments/environment';
+
+declare var google: any;
 
 interface User {
   id: number;
   email: string;
   first_name: string;
   last_name: string;
-  picture?: string;
+  is_staff?: boolean;
+  is_superuser?: boolean;
 }
 
 interface AuthResponse {
@@ -23,105 +26,202 @@ export class AuthService {
   private http = inject(HttpClient);
   private apiUrl = environment.apiUrl;
 
-  private currentUser = signal<User | null>(this.getStoredUser());
-  private authToken = signal<string | null>(this.getStoredToken());
+  // ✅ Usando signals para estado reactivo (Angular 16+)
+  private authToken = signal<string | null>(null);
+  private currentUser = signal<User | null>(null);
 
-  public isLoggedIn = computed(() => !!this.authToken());
-  public user = computed(() => this.currentUser());
-  public userEmail = computed(() => this.currentUser()?.email || '');
+  // Exponer signals como readonly
+  user = this.currentUser.asReadonly();
+  token = this.authToken.asReadonly();
 
-  constructor() {
-    //console.log('AuthService initialized with Signals');
+  /**
+   * Verifica si el usuario está autenticado
+   */
+  isAuthenticated(): boolean {
+    const token = this.authToken();
+    
+    // Verificar si existe token
+    if (!token) {
+      console.log('🔐 No hay token en memoria');
+      return false;
+    }
+
+    // Verificar si el token está almacenado en localStorage (para persistencia)
+    const storedToken = localStorage.getItem('authToken');
+    if (!storedToken || storedToken !== token) {
+      console.log('🔐 Token no coincide con almacenamiento');
+      return false;
+    }
+
+    // Opcional: Verificar expiración del token (si tu backend usa JWT expirable)
+    // if (this.isTokenExpired(token)) {
+    //   this.logout();
+    //   return false;
+    // }
+
+    console.log('🔐 Usuario autenticado correctamente');
+    return true;
   }
 
-  loginWithGoogle(googleToken: string): Observable<AuthResponse> {
-    //console.log('🔐 [FRONTEND] Enviando token a backend:', googleToken);
-    //console.log('🔐 [FRONTEND] URL:', `${this.apiUrl}/auth/google/`);
+  /**
+   * Inicializa el estado de autenticación desde localStorage
+   */
+  initializeAuthState(): void {
+    const token = localStorage.getItem('authToken');
+    const userData = localStorage.getItem('userData');
+    
+    console.log('🔐 Inicializando estado de autenticación...');
 
-    return this.http.post<AuthResponse>(`${this.apiUrl}/auth/google/`, {
-      access_token: googleToken
-    }).pipe(
+    if (token && userData) {
+      try {
+        const user = JSON.parse(userData);
+        this.authToken.set(token);
+        this.currentUser.set(user);
+        console.log('✅ Estado de autenticación restaurado:', user.email);
+      } catch (error) {
+        console.error('❌ Error parseando userData:', error);
+        this.clearAuthData();
+      }
+    } else {
+      console.log('🔐 No hay datos de autenticación persistentes');
+    }
+  }
+
+  /**
+   * Login con Google (JWT)
+   */
+
+  loginWithGoogle(jwtToken: string): Observable<AuthResponse> {
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json'
+    });
+    console.log('🔐 Enviando JWT al backend...', {
+    token: jwtToken,
+    tokenLength: jwtToken.length,
+    first50Chars: jwtToken.substring(0, 50)
+    });
+
+    return this.http.post<AuthResponse>(
+      `${this.apiUrl}/auth/google/`, 
+      { access_token: jwtToken },
+      { headers }
+    ).pipe(
       tap(response => {
-        //console.log('✅ [FRONTEND] Respuesta del backend:', response);
+        console.log('✅ Respuesta del backend:', response)
+        console.log('✅ Login exitoso, estableciendo token...');
         this.setAuthToken(response.key, response.user);
+      }),
+      catchError(error => {
+        console.error('❌ Error en login:', error);
+        console.log('📋 Detalles del error:', {
+        status: error.status,
+        statusText: error.statusText,
+        error: error.error, // Esto suele contener el mensaje específico
+        headers: error.headers
+        });
+        this.clearAuthData();
+        throw error;
       })
     );
   }
-
-  // 🔥 MÉTODO QUE FALTABA
+  /**
+   * Establece el token de autenticación
+   */
   setAuthToken(token: string, user: User): void {
-    //console.log('🔐 [FRONTEND] Guardando token y usuario');
-
+    // Guardar en localStorage para persistencia
+    localStorage.setItem('authToken', token);
+    localStorage.setItem('userData', JSON.stringify(user));
+    
     // Actualizar signals
     this.authToken.set(token);
     this.currentUser.set(user);
 
-    // Persistir en localStorage
-    localStorage.setItem('authToken', token);
-    localStorage.setItem('currentUser', JSON.stringify(user));
-
-    //console.log('✅ [FRONTEND] Auth state actualizado:', user.email);
+    console.log('✅ Token establecido para usuario:', user.email);
   }
+
+  /**
+   * Cierra la sesión
+   */
 
   logout(): void {
-    console.log('🔐 [FRONTEND] Cerrando sesión');
+    console.log('🔐 Cerrando sesión...');
+    
+    const userEmail = this.currentUser()?.email;
 
-    // Limpiar signals
-    this.authToken.set(null);
-    this.currentUser.set(null);
-
-    // Limpiar localStorage
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('currentUser');
-
+    this.clearAuthData();
+    
     // Cerrar sesión de Google
-    this.revokeGoogleSession();
+    if (window.google?.accounts?.id) {
+      if (userEmail) {
+        google.accounts.id.revoke(userEmail, (done: any) => {
+          console.log('✅ Sesión de Google revocada');
+        });
+      }
+      google.accounts.id.disableAutoSelect();
+    }
 
-    console.log('✅ [FRONTEND] Sesión cerrada');
+    console.log('✅ Sesión cerrada completamente');
+
   }
 
-  private revokeGoogleSession(): void {
-    if (typeof window !== 'undefined' && (window as any).google) {
-      try {
-        const google = (window as any).google;
-        google.accounts.id.disableAutoSelect();
-        console.log('✅ [FRONTEND] Sesión de Google revocada');
-      } catch (error) {
-        console.warn('⚠️ [FRONTEND] Error revocando sesión de Google:', error);
-      }
+  /**
+   * Limpia todos los datos de autenticación
+   */
+
+  private clearAuthData(): void {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userData');
+    this.authToken.set(null);
+    this.currentUser.set(null);
+  }
+
+  /**
+   * Obtiene el usuario actual
+   */
+  getCurrentUser(): User | null {
+    return this.currentUser();
+  }
+
+  /**
+   * Obtiene las iniciales del usuario para avatares
+   */
+  getUserInitials(): string {
+    const user = this.currentUser();
+    if (!user) return 'U';
+    
+    const firstName = user.first_name?.charAt(0) || '';
+    const lastName = user.last_name?.charAt(0) || '';
+    
+    return (firstName + lastName).toUpperCase() || 'U';
+  }
+
+  /**
+   * Verifica si el token ha expirado (para JWT)
+   */
+  private isTokenExpired(token: string): boolean {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const exp = payload.exp * 1000; // Convertir a milisegundos
+      return Date.now() >= exp;
+    } catch {
+      return true; // Si hay error al parsear, considerar como expirado
     }
   }
 
-  getToken(): string | null {
-    return this.authToken();
-  }
+  /**
+   * Verifica si el usuario tiene un rol específico
+   */
+  hasRole(role: string): boolean {
+    const user = this.currentUser();
+    if (!user) return false;
 
-  private getStoredUser(): User | null {
-    const storedUser = localStorage.getItem('currentUser');
-    return storedUser ? JSON.parse(storedUser) : null;
-  }
-
-  private getStoredToken(): string | null {
-    return localStorage.getItem('authToken');
-  }
-
-  // 🔥 MÉTODOS ADICIONALES ÚTILES
-  getAuthHeaders(): { [header: string]: string } {
-    const token = this.getToken();
-    return token ? { 'Authorization': `Token ${token}` } : {};
-  }
-
-  clearAuth(): void {
-    this.logout();
-  }
-
-  // Para debugging
-  printAuthState(): void {
-    console.log('🔐 [FRONTEND] Estado de autenticación:');
-    console.log('  - isLoggedIn:', this.isLoggedIn());
-    console.log('  - user:', this.user());
-    console.log('  - token:', this.getToken()?.substring(0, 20) + '...');
-    console.log('  - localStorage token:', !!localStorage.getItem('authToken'));
-    console.log('  - localStorage user:', !!localStorage.getItem('currentUser'));
+    switch (role) {
+      case 'admin':
+        return user.is_superuser === true;
+      case 'staff':
+        return user.is_staff === true || user.is_superuser === true;
+      default:
+        return false;
+    }
   }
 }

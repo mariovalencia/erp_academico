@@ -1,13 +1,19 @@
-import { Component, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { LoginComponent } from './components/login/login';
+import { Component, OnInit } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
+import { AuthService } from './services/auth';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, LoginComponent],
-  templateUrl: './app.html',
-  styleUrl: './app.css'
+  standalone: true,
+  imports: [RouterOutlet],
+  template: `<router-outlet></router-outlet>`
 })
-export class App {
-  protected readonly title = signal('frontend');
+export class AppComponent implements OnInit {
+  constructor(private authService: AuthService) {}
+
+  ngOnInit(): void {
+    // Inicializar estado de autenticación al cargar la app
+    console.log('🚀 Inicializando aplicación...');
+    this.authService.initializeAuthState();
+  }
 }

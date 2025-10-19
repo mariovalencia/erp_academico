@@ -1,7 +1,9 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../services/auth';
 import { environment } from '../../../environments/environment';
+import { lastValueFrom } from 'rxjs';
 
 declare var google: any;
 
@@ -14,171 +16,135 @@ declare var google: any;
 })
 export class LoginComponent implements OnInit {
   private authService = inject(AuthService);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   isLoading = signal(false);
   errorMessage = signal<string | null>(null);
+  returnUrl = signal<string>('/dashboard'); // URL por defecto
 
   ngOnInit(): void {
+    // Obtener la URL de retorno si existe
+    this.route.queryParams.subscribe(params => {
+      if (params['returnUrl']) {
+        this.returnUrl.set(params['returnUrl']);
+        console.log('🔐 URL de retorno:', params['returnUrl']);
+      }
+    });
     this.loadGoogleOAuthScript();
   }
 
   private loadGoogleOAuthScript(): void {
-    // Cargar script de Google Identity Services
+    if (window.google?.accounts?.id) {
+      this.initializeGoogleSignIn();
+      return;
+    }
+
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
     script.defer = true;
-    script.onload = () => {
-      //console.log('✅ Google Identity Services cargado');
-      this.initializeGoogleSignIn();
-    };
+    script.onload = () => this.initializeGoogleSignIn();
     script.onerror = () => {
       console.error('❌ Error cargando Google Identity Services');
-      this.errorMessage.set('Error al cargar Google Sign-In');
+      this.errorMessage.set('Error al cargar el servicio de autenticación');
     };
     document.head.appendChild(script);
   }
 
   private initializeGoogleSignIn(): void {
     try {
-      //console.log('🔐 Inicializando Google Sign-In con Client ID:', environment.googleClientId);
-
-      // 🔥 CONFIGURACIÓN CORRECTA para obtener Access Token
       google.accounts.id.initialize({
         client_id: environment.googleClientId,
-        callback: this.handleCredentialResponse.bind(this),
+        callback: (response: any) => this.handleCredentialResponse(response),
         auto_select: false,
         cancel_on_tap_outside: true,
-        context: 'signin'
+        context: 'signin',
+        ux_mode: 'popup'
       });
 
-      // Renderizar botón
       google.accounts.id.renderButton(
         document.getElementById('googleSignInButton'),
         {
           theme: 'outline',
           size: 'large',
           width: 280,
-          text: 'continue_with',
+          text: 'signin_with',
           shape: 'rectangular',
           logo_alignment: 'center'
         }
       );
 
-      //console.log('✅ Google Sign-In inicializado correctamente');
+      console.log('✅ Google Sign-In inicializado correctamente');
 
     } catch (error) {
       console.error('❌ Error inicializando Google Sign-In:', error);
-      this.errorMessage.set('Error al inicializar Google Sign-In');
+      this.errorMessage.set('Error al inicializar autenticación');
     }
   }
 
-  // 🔥 NUEVO MÉTODO: Usar Google OAuth2 para obtener Access Token
-  async loginWithGoogleOAuth2(): Promise<void> {
-    this.isLoading.set(true);
-    this.errorMessage.set(null);
-
-    try {
-      console.log('🔐 Iniciando flujo OAuth2...');
-
-      // Crear cliente OAuth2
-      const client = google.accounts.oauth2.initTokenClient({
-        client_id: environment.googleClientId,
-        scope: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
-        callback: async (response: any) => {
-          if (response.access_token) {
-            //console.log('✅ Access Token obtenido:', response.access_token.substring(0, 50) + '...');
-            await this.sendTokenToBackend(response.access_token);
-          } else {
-            console.error('❌ No se pudo obtener access token');
-            this.errorMessage.set('Error al obtener token de Google');
-            this.isLoading.set(false);
-          }
-        },
-        error_callback: (error: any) => {
-          console.error('❌ Error en OAuth2:', error);
-          this.errorMessage.set('Error en autenticación con Google');
-          this.isLoading.set(false);
-        }
-      });
-
-      // Solicitar token
-      client.requestAccessToken();
-
-    } catch (error) {
-      console.error('❌ Error en loginWithGoogleOAuth2:', error);
-      this.errorMessage.set('Error al iniciar sesión');
-      this.isLoading.set(false);
-    }
-  }
-
-  // Manejar respuesta del botón estándar (JWT)
   private async handleCredentialResponse(response: any): Promise<void> {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
-    //console.log('🔐 Respuesta de Google (JWT):', response);
-
-    try {
-      // El JWT está en response.credential
-      const jwtToken = response.credential;
-      //console.log('🔐 JWT Token:', jwtToken.substring(0, 50) + '...');
-
-      // 🔥 PRUEBA: Intentar usar el JWT directamente
-      const loginResult: any = await this.authService.loginWithGoogle(jwtToken).toPromise();
-
-      if (loginResult?.key) {
-        this.authService.setAuthToken(loginResult.key, loginResult.user);
-        this.showSuccessMessage();
-        //console.log('✅ Login exitoso con JWT');
-      } else {
-        throw new Error('Respuesta inválida del servidor');
-      }
-    } catch (error: any) {
-      console.error('❌ Error con JWT:', error);
-
-      // Si falla con JWT, intentar con OAuth2
-      console.log('🔄 Intentando con flujo OAuth2...');
-      this.loginWithGoogleOAuth2();
+    if (!response?.credential) {
+      this.errorMessage.set('Respuesta de autenticación inválida');
+      this.isLoading.set(false);
+      return;
     }
-  }
 
-  private async sendTokenToBackend(accessToken: string): Promise<void> {
+    const jwtToken = response.credential;
+    
     try {
-      //console.log('🔐 Enviando Access Token al backend...');
+      console.log('🔐 Enviando JWT al backend para verificación...');
 
-      const loginResult: any = await this.authService.loginWithGoogle(accessToken).toPromise();
+      const loginResult = await lastValueFrom(this.authService.loginWithGoogle(jwtToken));
 
-      if (loginResult?.key) {
+      if (loginResult?.key && loginResult?.user) {
         this.authService.setAuthToken(loginResult.key, loginResult.user);
-        this.showSuccessMessage();
-        console.log('✅ Login exitoso con Access Token');
+        this.handleSuccessfulLogin();
       } else {
-        throw new Error('Respuesta inválida del servidor');
+        throw new Error('Credenciales inválidas del servidor');
       }
+
     } catch (error: any) {
-      console.error('❌ Error enviando token al backend:', error);
-      this.handleError(error);
+      console.error('❌ Error en autenticación:', error);
+      this.handleAuthError(error);
     } finally {
       this.isLoading.set(false);
     }
   }
 
-  private showSuccessMessage(): void {
-    const user = this.authService.user();
-    const userName = user?.first_name || user?.email || 'Estudiante';
-    alert(`🎉 ¡Bienvenido ${userName}! \nLogin exitoso al ERP Universitario`);
+  private handleSuccessfulLogin(): void {
+    console.log('✅ Autenticación exitosa, redirigiendo a:', this.returnUrl());
+    
+    // Redirigir a la URL guardada o al dashboard por defecto
+    this.router.navigateByUrl(this.returnUrl());
   }
 
-  private handleError(error: any): void {
-    const message = error?.error?.message ||
-                   error?.message ||
-                   'Error al iniciar sesión. Intenta de nuevo.';
+  private handleAuthError(error: any): void {
+    let errorMessage = 'Error al iniciar sesión. Intenta de nuevo.';
+    
+    if (error?.status === 401) {
+      errorMessage = 'Credenciales inválidas o expiradas';
+    } else if (error?.status === 403) {
+      errorMessage = 'Acceso no autorizado';
+    } else if (error?.status === 0) {
+      errorMessage = 'Error de conexión. Verifica tu internet.';
+    } else if (error?.error?.message) {
+      errorMessage = error.error.message;
+    }
 
-    this.errorMessage.set(message);
+    this.errorMessage.set(errorMessage);
 
     setTimeout(() => {
       this.errorMessage.set(null);
-    }, 5000);
+    }, 7000);
+  }
+
+  ngOnDestroy(): void {
+    if (window.google?.accounts?.id) {
+      google.accounts.id.cancel();
+    }
   }
 }
