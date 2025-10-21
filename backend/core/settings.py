@@ -40,6 +40,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# Modelo de usuario personalizado
+AUTH_USER_MODEL = 'core_users.CustomUser'
 
 # Application definition
 
@@ -50,31 +52,22 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.sites',
     'django_filters',
     'rest_framework',
-    'rest_framework.authtoken',
+    'rest_framework_simplejwt',
     'corsheaders',
-    'dj_rest_auth',
-    'dj_rest_auth.registration',
-    'allauth',
-    'allauth.account',
-    'allauth.socialaccount',
-    'allauth.socialaccount.providers.google',
     'authentication',
+    'core_audit',
+    'core_organization',
+    'core_permissions',
+    'core_users',
 
 ]
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
-    'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
-SITE_ID = 1
-
-# Configuración opcional de allauth
-ACCOUNT_EMAIL_VERIFICATION = 'optional'
-LOGIN_REDIRECT_URL = '/'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -85,7 +78,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -125,11 +117,57 @@ DATABASES = {
 # Configuración de REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',  # 🔥 PRIMARIO
+        'rest_framework.authentication.SessionAuthentication',        # 🔥 PARA ADMIN DJANGO
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
-    ]
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/day',      # 🔥 SEGURIDAD: Límite para usuarios anónimos
+        'user': '1000/day'      # 🔥 SEGURIDAD: Límite para usuarios autenticados
+    }
+}
+
+# Configuración avanzada de JWT para máxima seguridad
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    # 🔥 TIEMPOS DE EXPIRACIÓN SEGUROS
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),           # Token corto para mayor seguridad
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),              # Refresh token válido por 1 día
+    'ROTATE_REFRESH_TOKENS': True,                           # 🔥 Nuevo refresh token en cada refresh
+    'BLACKLIST_AFTER_ROTATION': True,                        # 🔥 Previene reuso de refresh tokens
+    'UPDATE_LAST_LOGIN': True,                               # Auditoría de último login
+    
+    # 🔥 ALGORITMOS DE SEGURIDAD
+    'ALGORITHM': 'HS256',                                    # Algoritmo seguro
+    'SIGNING_KEY': SECRET_KEY,                               # Usa la SECRET_KEY de Django
+    'VERIFYING_KEY': None,
+    'AUDIENCE': None,
+    'ISSUER': None,
+    
+    # 🔥 CONFIGURACIÓN DE HEADERS
+    'AUTH_HEADER_TYPES': ('Bearer',),                        # Standard industry
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    
+    # 🔥 CONFIGURACIÓN DE CLAIMS
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+    'JTI_CLAIM': 'jti',                                      # Identificador único del token
+    
+    # 🔥 MANEJO DE ERRORES
+    'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
+    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
 }
 
 CORS_ALLOWED_ORIGINS = [
@@ -139,39 +177,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8000",
 ]
 
-# Configuración de AllAuth para Google
-SOCIALACCOUNT_PROVIDERS = {
-    'google': {
-        'APP': {
-            'client_id': os.getenv('GOOGLE_CLIENT_ID'),
-            'secret': os.getenv('GOOGLE_CLIENT_SECRET'),
-            'key': ''
-        },
-        'SCOPE': [
-            'profile',
-            'email',
-        ],
-        'AUTH_PARAMS': {
-            'access_type': 'online',
-        }
-    }
-}
-
-# Solo login con Google (más seguro para empezar)
-ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
-ACCOUNT_LOGIN_METHODS = {'email'}
-ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
-SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
-SOCIALACCOUNT_EMAIL_REQUIRED = True
-SOCIALACCOUNT_QUERY_EMAIL = True
-
-# Para desarrollo, puedes desactivar la verificación de email
-if DEBUG:
-    ACCOUNT_EMAIL_VERIFICATION = 'none'
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-else:
-    ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
-    # Configurar backend de email real para producción
+CORS_ALLOW_CREDENTIALS = True
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

@@ -11,13 +11,12 @@ click-plugins==1.1.1.2
 click-repl==0.3.0
 colorama==0.4.6
 cryptography==46.0.2
-dj-rest-auth==7.0.1
 Django==5.2.7
-django-allauth==65.12.0
 django-cors-headers==4.9.0
 django-extensions==4.1
 django-filter==25.2
 djangorestframework==3.16.1
+djangorestframework_simplejwt==5.5.1
 idna==3.11
 kombu==5.5.4
 packaging==25.0
@@ -25,7 +24,6 @@ pillow==11.3.0
 prompt_toolkit==3.0.52
 psycopg2-binary==2.9.11
 pycparser==2.23
-PyJWT==2.10.1
 python-dateutil==2.9.0.post0
 python-decouple==3.8
 python-dotenv==1.1.1
