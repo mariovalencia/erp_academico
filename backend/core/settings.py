@@ -46,7 +46,6 @@ AUTH_USER_MODEL = 'core_users.CustomUser'
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -61,6 +60,7 @@ INSTALLED_APPS = [
     'core_organization',
     'core_permissions',
     'core_users',
+    'django.contrib.admin',
 
 ]
 

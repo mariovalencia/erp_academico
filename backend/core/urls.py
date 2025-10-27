@@ -25,4 +25,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/health/', health_check),
     path('api/auth/', include('authentication.urls')),
+    path('api/users/', include('core_users.urls')),  # 🔥 NUEVO
+    path('api/permissions/', include('core_permissions.urls')),  # 🔥 NUEVO
 ]

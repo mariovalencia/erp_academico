@@ -39,16 +39,35 @@ class PermissionManager:
                 for action in actions:
                     for scope in ['all', 'department', 'own']:
                         try:
-                            permission = GranularPermission.objects.create(
+                            # 🔥 CREAR INSTANCIA PRIMERO Y LUEGO GUARDAR
+                            permission = GranularPermission(
                                 module=module,
                                 functionality=functionality,
                                 functionality_code=func_code,
                                 action=action,
                                 scope=scope
                             )
+                            
+                            # 🔥 FORZAR LA GENERACIÓN DEL NOMBRE Y CÓDIGO
+                            if not permission.name:
+                                permission.name = f"{module.name} - {functionality} - {dict(permission.ACTION_CHOICES)[action]} - {dict(permission.SCOPE_CHOICES)[scope]}"
+                            
+                            if not permission.permission_code:
+                                permission.permission_code = f"{module.code}.{func_code}.{action}.{scope}"
+                            
+                            # 🔥 MARCAR ACCIONES PELIGROSAS AUTOMÁTICAMENTE
+                            if action in ['delete', 'approve', 'reject']:
+                                permission.is_dangerous = True
+                            
+                            permission.save()
                             created_permissions.append(permission)
+                            created_permissions.append(permission)
+
                         except ValidationError as e:
                             print(f"Error creando permiso {func_code}.{action}.{scope}: {e}")
+
+                        except Exception as e:
+                            print(f"❌ Error inesperado con {func_code}.{action}.{scope}: {e}")
         
         return created_permissions
     
