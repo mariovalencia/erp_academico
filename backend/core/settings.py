@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_filters',
+    'mptt',
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
@@ -61,6 +62,7 @@ INSTALLED_APPS = [
     'core_permissions',
     'core_users',
     'django.contrib.admin',
+
 
 ]
 
