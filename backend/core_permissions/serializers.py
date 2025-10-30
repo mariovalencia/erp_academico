@@ -1,19 +1,15 @@
 from rest_framework import serializers
 from .models import (
     PermissionModule, GranularPermission, Role, 
-    UserRole, RoleTemplate, Department,
-    RolePermission, TemplateRole
+    UserRole, RoleTemplate, RolePermission, TemplateRole
 )
-from core_users.models import CustomUser  # 🔥 IMPORTAR EL MODELO DIRECTAMENTE
 
-# Serializer temporal para User (hasta que tengamos el de core_users)
-class CustomUserSerializer(serializers.ModelSerializer):
-    """Serializer temporal para CustomUser"""
-    class Meta:
-        model = CustomUser
-        fields = ['id', 'email', 'first_name', 'last_name']
-        read_only_fields = ['id']
+# ✅ IMPORTAR SERIALIZERS DE LOS MÓDULOS CORRECTOS
+from core_users.serializers import CustomUserSerializer
+from core_organization.serializers import DepartmentSerializer
 
+# ❌ NO hay CustomUserSerializer temporal aquí
+# ❌ NO hay DepartmentSerializer temporal aquí
 
 class PermissionModuleSerializer(serializers.ModelSerializer):
     """Serializer para módulos de permisos"""
@@ -62,12 +58,14 @@ class RolePermissionSerializer(serializers.ModelSerializer):
     """Serializer para la relación Role-Permission"""
     permission_detail = GranularPermissionSerializer(source='permission', read_only=True)
     assigned_by_email = serializers.CharField(source='assigned_by.email', read_only=True)
+    department_filter_detail = DepartmentSerializer(source='department_filter', read_only=True)  # ✅ SERIALIZER REAL
     
     class Meta:
         model = RolePermission
         fields = [
             'id', 'role', 'permission', 'permission_detail',
-            'department_filter', 'is_temporary', 'valid_from', 'valid_until',
+            'department_filter', 'department_filter_detail',  # ✅ REFERENCIA CORRECTA
+            'is_temporary', 'valid_from', 'valid_until',
             'assigned_by', 'assigned_by_email', 'assigned_at'
         ]
         read_only_fields = ['id', 'assigned_at']
@@ -107,16 +105,16 @@ class RoleSerializer(serializers.ModelSerializer):
 class UserRoleSerializer(serializers.ModelSerializer):
     """Serializer para asignación de roles a usuarios"""
     role_detail = RoleSerializer(source='role', read_only=True)
-    user_detail = CustomUserSerializer(source='user', read_only=True)
+    user_detail = CustomUserSerializer(source='user', read_only=True)  # ✅ SERIALIZER REAL
     assigned_by_email = serializers.CharField(source='assigned_by.email', read_only=True)
-    department_name = serializers.CharField(source='department.name', read_only=True)
+    department_detail = DepartmentSerializer(source='department', read_only=True)  # ✅ SERIALIZER REAL
     is_active = serializers.BooleanField(read_only=True)
     
     class Meta:
         model = UserRole
         fields = [
             'id', 'user', 'user_detail', 'role', 'role_detail',
-            'department', 'department_name', 'is_temporary',
+            'department', 'department_detail', 'is_temporary',  # ✅ REFERENCIA CORRECTA
             'valid_from', 'valid_until', 'is_active',
             'assigned_by', 'assigned_by_email', 'assigned_at', 'notes'
         ]
@@ -155,19 +153,6 @@ class RoleTemplateSerializer(serializers.ModelSerializer):
         return obj.roles.count()
 
 
-class DepartmentSerializer(serializers.ModelSerializer):
-    """Serializer para departamentos (temporal)"""
-    users_count = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = Department
-        fields = ['id', 'name', 'code', 'users_count']
-        read_only_fields = ['id']
-    
-    def get_users_count(self, obj):
-        return obj.user_roles.count()
-
-
 # Serializers para operaciones específicas
 class AssignPermissionsToRoleSerializer(serializers.Serializer):
     """Serializer para asignar múltiples permisos a un rol"""
@@ -176,7 +161,7 @@ class AssignPermissionsToRoleSerializer(serializers.Serializer):
         help_text="Lista de códigos de permisos a asignar"
     )
     assigned_by = serializers.PrimaryKeyRelatedField(
-        queryset=CustomUser.objects.all(),
+        queryset=CustomUserSerializer.Meta.model.objects.all(),
         required=False
     )
 
@@ -184,11 +169,11 @@ class AssignPermissionsToRoleSerializer(serializers.Serializer):
 class AssignRoleToUserSerializer(serializers.Serializer):
     """Serializer para asignar un rol a un usuario"""
     user_id = serializers.PrimaryKeyRelatedField(
-        queryset=CustomUser.objects.all()
+        queryset=CustomUserSerializer.Meta.model.objects.all()
     )
     role_id = serializers.PrimaryKeyRelatedField(queryset=Role.objects.all())
     department_id = serializers.PrimaryKeyRelatedField(
-        queryset=Department.objects.all(), 
+        queryset=DepartmentSerializer.Meta.model.objects.all(),  # ✅ REFERENCIA CORRECTA
         required=False, 
         allow_null=True
     )
@@ -200,10 +185,10 @@ class AssignRoleToUserSerializer(serializers.Serializer):
 class UserPermissionsSerializer(serializers.Serializer):
     """Serializer para obtener permisos de un usuario"""
     user_id = serializers.PrimaryKeyRelatedField(
-        queryset=CustomUser.objects.all()
+        queryset=CustomUserSerializer.Meta.model.objects.all()
     )
     department_id = serializers.PrimaryKeyRelatedField(
-        queryset=Department.objects.all(), 
+        queryset=DepartmentSerializer.Meta.model.objects.all(),  # ✅ REFERENCIA CORRECTA
         required=False, 
         allow_null=True
     )
@@ -212,11 +197,11 @@ class UserPermissionsSerializer(serializers.Serializer):
 class CheckPermissionSerializer(serializers.Serializer):
     """Serializer para verificar si un usuario tiene un permiso"""
     user_id = serializers.PrimaryKeyRelatedField(
-        queryset=CustomUser.objects.all()
+        queryset=CustomUserSerializer.Meta.model.objects.all()
     )
     permission_code = serializers.CharField(max_length=100)
     department_id = serializers.PrimaryKeyRelatedField(
-        queryset=Department.objects.all(), 
+        queryset=DepartmentSerializer.Meta.model.objects.all(),  # ✅ REFERENCIA CORRECTA
         required=False, 
         allow_null=True
     )

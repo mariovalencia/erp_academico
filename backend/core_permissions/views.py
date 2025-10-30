@@ -5,10 +5,10 @@ from rest_framework.permissions import IsAuthenticated,IsAdminUser, AllowAny
 from django.db import transaction
 from django.utils import timezone
 from datetime import timedelta
-
+from core_organization.models import Department
 from .models import (
     PermissionModule, GranularPermission, Role, 
-    UserRole, RoleTemplate, Department
+    UserRole, RoleTemplate
 )
 from .serializers import *
 from .utils import PermissionManager, PermissionCache

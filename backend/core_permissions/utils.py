@@ -3,9 +3,11 @@ from django.db import transaction, models  # 🔥 IMPORTAR models
 from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType  # 🔥 IMPORTAR ContentType
 from django.contrib.auth.models import Permission as AuthPermission
+from core_users.models import CustomUser
+from core_organization.models import Department, Location  # ✅ MODELOS REALES
 from .models import (
     GranularPermission, Role, UserRole, RoleTemplate, 
-    PermissionModule, Department
+    PermissionModule, TemplateRole
 )
 
 class PermissionManager:

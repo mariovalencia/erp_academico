@@ -3,18 +3,8 @@ from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import Permission
 from core_users.models import CustomUser
-
-# Nota: Department vendrá de core_organization, por ahora usamos un modelo temporal
-class Department(models.Model):
-    """Modelo temporal hasta que creemos core_organization"""
-    name = models.CharField(_('department name'), max_length=100)
-    code = models.CharField(_('department code'), max_length=50, unique=True)
-    
-    class Meta:
-        db_table = 'core_departments_temp'
-    
-    def __str__(self):
-        return self.name
+from core_users.models import CustomUser
+from core_organization.models import Department, Location
 
 
 class PermissionModule(models.Model):
@@ -24,7 +14,7 @@ class PermissionModule(models.Model):
     name = models.CharField(_('module name'), max_length=100, unique=True)
     code = models.CharField(_('module code'), max_length=50, unique=True)
     description = models.TextField(_('description'), blank=True)
-    icon = models.CharField(_('icon'), max_length=50, blank=True)
+    icon = models.CharField(_('icon'), max_length=50, blank=True, help_text=_('Icono para la UI'))
     is_active = models.BooleanField(_('active'), default=True)
     order = models.PositiveIntegerField(_('order'), default=0)
     

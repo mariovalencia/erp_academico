@@ -22,8 +22,9 @@ assignment_urls = [
 urlpatterns = [
     path('', include(router.urls)),
     path('stats/', views.OrganizationalStatsView.as_view(), name='organization-stats'),
-    path('departments/', include(department_urls)),
-    path('assignments/', include(assignment_urls)),
+    path('departments/tree/', views.DepartmentViewSet.as_view({'get': 'tree'}), name='departments-tree'),
+    path('assignments/my_assignment/', views.OrganizationalAssignmentViewSet.as_view({'get': 'my_assignment'}), name='my_assignment'),
+    path('assignments/by_department/', views.OrganizationalAssignmentViewSet.as_view({'get': 'by_department'}), name='assignments_by_department'),
 ]
 
 app_name = 'core_organization'
