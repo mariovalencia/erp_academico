@@ -7,7 +7,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
 BASE_URL = "http://localhost:8000"
-TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzYxODYzNDY4LCJpYXQiOjE3NjE4NjE2NjgsImp0aSI6ImUyM2UwNDEyYzhhODRmNzVhMGMxM2ExY2NkNDA5ZmIxIiwidXNlcl9pZCI6MSwiZW1haWwiOiJtZXZhbGVuY2lhY0B1am1kLmVkdS5zdiJ9.mp1K9tfisC-lwuDAjdWmlNLrsJ0yGr2ttui62eMXB88"  # 🔥 REEMPLAZA
+TOKEN = "Aqui_va_el_token"  # 🔥 REEMPLAZA
 
 headers = {"Authorization": f"Bearer {TOKEN}"}
 
