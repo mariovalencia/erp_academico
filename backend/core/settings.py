@@ -61,10 +61,22 @@ INSTALLED_APPS = [
     'core_organization',
     'core_permissions',
     'core_users',
+    'notifications',
     'django.contrib.admin',
-
-
 ]
+
+# Configuración de Email (para notificaciones)
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'your-email@gmail.com'
+EMAIL_HOST_PASSWORD = 'your-app-password'
+DEFAULT_FROM_EMAIL = 'noreply@yourapp.com'
+
+# Configuración Celery (opcional, para procesamiento en background)
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
@@ -232,3 +244,10 @@ CACHES = {
 
 # Tiempo de caché para permisos (segundos)
 PERMISSION_CACHE_TIMEOUT = 300  # 5 minutos
+
+# Para pruebas en desarrollo - emails en consola
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# O para archivos
+# EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+# EMAIL_FILE_PATH = '/tmp/app-emails'
