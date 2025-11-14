@@ -1,9 +1,9 @@
-# notifications/services.py
+# notifications/services.py - VERSIÓN CORREGIDA
 import logging
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
-from celery import shared_task
+from celery import shared_task  # ✅ IMPORTAR DIRECTAMENTE
 from .models import Notification, NotificationTemplate, NotificationDelivery, NotificationChannel
 
 logger = logging.getLogger(__name__)
@@ -30,13 +30,18 @@ class NotificationService:
             
             logger.info(f"Notificación creada: {notification.id} para {user.email}")
             
-            # Procesar envío
+            # Procesar envío con Celery
             if scheduled_for and scheduled_for > timezone.now():
                 # Programar para después
-                cls._schedule_notification.delay(notification.id, channels)
+                cls._schedule_notification.apply_async(
+                    args=[notification.id, channels],
+                    eta=scheduled_for
+                )
+                logger.info(f"Notificación {notification.id} programada para {scheduled_for}")
             else:
                 # Enviar inmediatamente
                 cls._process_notification.delay(notification.id, channels)
+                logger.info(f"Notificación {notification.id} enviada a la cola de procesamiento")
             
             return notification
             
@@ -74,10 +79,10 @@ class NotificationService:
             preferences = preferences.filter(template__code=template_code)
         
         return preferences
-    
+
     @staticmethod
-    @shared_task
-    def _process_notification(notification_id, channels=None):
+    @shared_task(bind=True, max_retries=3)  # ✅ USAR shared_task DIRECTAMENTE
+    def _process_notification(self, notification_id, channels=None):
         """Procesa el envío de una notificación (tarea Celery)"""
         try:
             notification = Notification.objects.get(id=notification_id)
@@ -105,13 +110,17 @@ class NotificationService:
             logger.error(f"Notificación {notification_id} no encontrada")
         except Exception as e:
             logger.error(f"Error procesando notificación {notification_id}: {str(e)}")
-            # Actualizar estado a fallido
-            notification.status = 'failed'
-            notification.error_message = str(e)
-            notification.save()
-    
+            # Reintentar después de 60 segundos
+            try:
+                self.retry(countdown=60, max_retries=3)
+            except self.MaxRetriesExceededError:
+                # Actualizar estado a fallido después de reintentos
+                notification.status = 'failed'
+                notification.error_message = f"Fallido después de 3 intentos: {str(e)}"
+                notification.save()
+
     @staticmethod
-    @shared_task
+    @shared_task  # ✅ USAR shared_task DIRECTAMENTE
     def _schedule_notification(notification_id, channels=None):
         """Programa una notificación para envío futuro"""
         try:
@@ -130,7 +139,7 @@ class NotificationService:
                 
         except Notification.DoesNotExist:
             logger.error(f"Notificación programada {notification_id} no encontrada")
-    
+
     @classmethod
     def _deliver_to_channel(cls, notification, channel):
         """Envía la notificación a un canal específico"""

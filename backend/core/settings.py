@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'core_permissions',
     'core_users',
     'notifications',
+    'dashboard',
     'django.contrib.admin',
 ]
 
@@ -245,9 +246,32 @@ CACHES = {
 # Tiempo de caché para permisos (segundos)
 PERMISSION_CACHE_TIMEOUT = 300  # 5 minutos
 
-# Para pruebas en desarrollo - emails en consola
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Configuración de Email para Desarrollo
+#EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Emails en consola
+# EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'  # Emails en archivos
+# EMAIL_FILE_PATH = '/tmp/app-emails'  # Ruta para guardar emails
 
-# O para archivos
-# EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
-# EMAIL_FILE_PATH = '/tmp/app-emails'
+# Opcional: Configuración SMTP fake para desarrollo
+# EMAIL_HOST = 'localhost'
+# EMAIL_PORT = 1025  # Usar python -m smtpd -n -c DebuggingServer localhost:1025
+# EMAIL_USE_TLS = False
+# DEFAULT_FROM_EMAIL = 'noreply@erpacademico.com'
+
+# Configuración Celery
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'America/El_Salvador'  # Ajusta según tu zona horaria
+CELERY_TASK_ALWAYS_EAGER = False  # IMPORTANTE: False para usar Redis
+CELERY_TASK_EAGER_PROPAGATES = True
+
+# Configuración para desarrollo
+CELERY_TASK_DEFAULT_QUEUE = 'erp_academico'
+CELERY_TASK_DEFAULT_EXCHANGE = 'erp_academico'
+CELERY_TASK_DEFAULT_ROUTING_KEY = 'erp_academico'
+
+# Configuración de Email para Desarrollo (usando consola)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@erpacademico.com'

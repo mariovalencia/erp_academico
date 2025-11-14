@@ -1,16 +1,41 @@
+# notifications/api/serializers.py
 from rest_framework import serializers
 from .models import Notification, NotificationTemplate, UserNotificationPreference
 
 class NotificationSerializer(serializers.ModelSerializer):
     template_name = serializers.CharField(source='template.name', read_only=True)
+    template_code = serializers.CharField(source='template.code', read_only=True)
+    user_email = serializers.CharField(source='user.email', read_only=True)
     
     class Meta:
         model = Notification
         fields = [
-            'id', 'template', 'template_name', 'context', 'status',
-            'created_at', 'sent_at', 'read_at'
+            'id', 'user', 'user_email', 'template', 'template_name', 'template_code',
+            'context', 'status', 'scheduled_for', 'sent_at', 'read_at',
+            'created_at', 'updated_at'
         ]
-        read_only_fields = ['status', 'created_at', 'sent_at', 'read_at']
+        read_only_fields = [
+            'id', 'user', 'status', 'sent_at', 'read_at', 'created_at', 'updated_at'
+        ]
+
+class NotificationListSerializer(serializers.ModelSerializer):
+    template_name = serializers.CharField(source='template.name', read_only=True)
+    preview = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Notification
+        fields = [
+            'id', 'template_name', 'status', 'preview', 
+            'created_at', 'read_at'
+        ]
+    
+    def get_preview(self, obj):
+        """Obtener una vista previa del contenido"""
+        try:
+            rendered = obj.template.render_content(obj.context)
+            return rendered.get('subject') or rendered.get('body', '')[:100] + '...'
+        except:
+            return ''
 
 class UserNotificationPreferenceSerializer(serializers.ModelSerializer):
     template_name = serializers.CharField(source='template.name', read_only=True)
@@ -23,33 +48,28 @@ class UserNotificationPreferenceSerializer(serializers.ModelSerializer):
             'is_enabled', 'config'
         ]
 
-# notifications/api/views.py
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from .models import Notification, UserNotificationPreference
-from .serializers import NotificationSerializer, UserNotificationPreferenceSerializer
+class MarkAsReadSerializer(serializers.Serializer):
+    notification_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=True
+    )
 
-class NotificationViewSet(viewsets.ModelViewSet):
-    serializer_class = NotificationSerializer
-    
-    def get_queryset(self):
-        return Notification.objects.filter(user=self.request.user)
-    
-    @action(detail=True, methods=['post'])
-    def mark_read(self, request, pk=None):
-        notification = self.get_object()
-        notification.mark_as_read()
-        return Response({'status': 'marked as read'})
-    
-    @action(detail=False, methods=['get'])
-    def unread(self, request):
-        unread_notifications = self.get_queryset().filter(read_at__isnull=True)
-        serializer = self.get_serializer(unread_notifications, many=True)
-        return Response(serializer.data)
+class TestNotificationSerializer(serializers.Serializer):
+    """🔧 SERIALIZER FALTANTE: Para notificación de prueba"""
+    template_code = serializers.CharField(required=True)
+    channels = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        default=['in_app']
+    )
 
-class UserNotificationPreferenceViewSet(viewsets.ModelViewSet):
-    serializer_class = UserNotificationPreferenceSerializer
+class NotificationTemplateSerializer(serializers.ModelSerializer):
+    """🔧 SERIALIZER FALTANTE: Para plantillas"""
+    channels = serializers.SerializerMethodField()
     
-    def get_queryset(self):
-        return UserNotificationPreference.objects.filter(user=self.request.user)
+    class Meta:
+        model = NotificationTemplate
+        fields = ['id', 'code', 'name', 'description', 'channels']
+    
+    def get_channels(self, obj):
+        return [channel.name for channel in obj.channels.all()]

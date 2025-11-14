@@ -79,9 +79,73 @@ services:
     networks:
       - ${NETWORK_NAME:-erp-network}
 
+  redis:
+    image: redis:8-alpine
+    container_name: erp_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - ${NETWORK_NAME:-erp-network}
+
+  celery_worker:
+    build:
+      context: ./backend  # ✅ CORREGIDO: usar el mismo contexto que backend
+      dockerfile: Dockerfile
+    container_name: erp_celery_worker
+    working_dir: /app  # ✅ AGREGAR working_dir
+    command: >
+      sh -c "sleep 10 && celery -A core.celery_app worker --loglevel=info"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - redis
+      - database
+    env_file:
+      - .env
+      - ./backend/.env.backend
+    environment:
+      - PYTHONPATH=/app
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:${POSTGRES_PORT}/${POSTGRES_DB}
+      - DEBUG=${DJANGO_DEBUG}
+      - SECRET_KEY=${DJANGO_SECRET_KEY}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    networks:
+      - ${NETWORK_NAME:-erp-network}
+
+  celery_beat:
+    build:
+      context: ./backend  # ✅ CORREGIDO: usar el mismo contexto que backend
+      dockerfile: Dockerfile
+    container_name: erp_celery_beat
+    working_dir: /app  # ✅ AGREGAR working_dir
+    command: >
+      sh -c "sleep 10 && celery -A core.celery_app beat --loglevel=info"
+    volumes:
+      - ./backend:/app  # ✅ CORREGIDO: montar solo backend
+    depends_on:
+      - redis
+      - database
+    env_file:
+      - .env
+      - ./backend/.env.backend
+    environment:
+      - PYTHONPATH=/app
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:${POSTGRES_PORT}/${POSTGRES_DB}
+      - DEBUG=${DJANGO_DEBUG}
+      - SECRET_KEY=${DJANGO_SECRET_KEY}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    networks:
+      - ${NETWORK_NAME:-erp-network}
+
 volumes:
   postgres_data:
   backend_data:
+  redis_data:
 
 networks:
   erp-network:

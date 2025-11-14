@@ -28,4 +28,5 @@ urlpatterns = [
     path('api/users/', include('core_users.urls')),  # 🔥 NUEVO
     path('api/permissions/', include('core_permissions.urls')),  # 🔥 NUEVO
     path('api/organization/', include('core_organization.urls')),  # 🔥 NUEVO
+    path('notifications/', include('notifications.urls')),
 ]
