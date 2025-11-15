@@ -29,4 +29,5 @@ urlpatterns = [
     path('api/permissions/', include('core_permissions.urls')),  # 🔥 NUEVO
     path('api/organization/', include('core_organization.urls')),  # 🔥 NUEVO
     path('notifications/', include('notifications.urls')),
+    path('dashboard/', include('dashboard.urls')),
 ]

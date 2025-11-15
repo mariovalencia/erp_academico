@@ -6,7 +6,7 @@ class DashboardWidgetAdmin(admin.ModelAdmin):
     list_display = ['name', 'code', 'widget_type', 'default_size', 'is_active']
     list_filter = ['widget_type', 'is_active', 'default_size']
     search_fields = ['name', 'code', 'description']
-    filter_horizontal = ['required_permissions']
+    filter_horizontal = ['required_permissions']  # ✅ Ahora funciona con GranularPermission
     readonly_fields = ['created_at', 'updated_at']
 
 @admin.register(UserDashboard)
