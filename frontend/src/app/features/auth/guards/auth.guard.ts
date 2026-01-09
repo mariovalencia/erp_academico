@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
-import { AuthService } from '../services/auth';
+import { AuthService } from '../services/auth.service';
 
 export const authGuard: CanActivateFn = (
   route: ActivatedRouteSnapshot,
@@ -17,13 +17,13 @@ export const authGuard: CanActivateFn = (
     return true;
   } else {
     //console.log('❌ Usuario NO autenticado, redirigiendo a login');
-    
+
     // Guardar la URL a la que intentaba acceder para redirigir después del login
     const returnUrl = state.url;
-    router.navigate(['/login'], { 
-      queryParams: { returnUrl: returnUrl } 
+    router.navigate(['/login'], {
+      queryParams: { returnUrl: returnUrl }
     });
-    
+
     return false;
   }
 };

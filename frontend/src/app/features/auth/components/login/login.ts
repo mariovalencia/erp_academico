@@ -1,8 +1,9 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, ActivatedRoute } from '@angular/router';
-import { AuthService } from '../../services/auth';
-import { environment } from '../../../environments/environment';
+import { FormsModule } from '@angular/forms';
+import { Router, ActivatedRoute, RouterLink  } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
+import { environment } from '../../../../../environments/environment';
 import { lastValueFrom } from 'rxjs';
 
 declare var google: any;
@@ -10,7 +11,7 @@ declare var google: any;
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './login.html',
   styleUrl: './login.css'
 })
@@ -94,7 +95,7 @@ export class LoginComponent implements OnInit {
     }
 
     const jwtToken = response.credential;
-    
+
     try {
       //console.log('🔐 Enviando JWT al backend para verificación...');
 
@@ -117,14 +118,14 @@ export class LoginComponent implements OnInit {
 
   private handleSuccessfulLogin(): void {
     //console.log('✅ Autenticación exitosa, redirigiendo a:', this.returnUrl());
-    
+
     // Redirigir a la URL guardada o al dashboard por defecto
     this.router.navigateByUrl(this.returnUrl());
   }
 
   private handleAuthError(error: any): void {
     let errorMessage = 'Error al iniciar sesión. Intenta de nuevo.';
-    
+
     if (error?.status === 401) {
       errorMessage = 'Credenciales inválidas o expiradas';
     } else if (error?.status === 403) {

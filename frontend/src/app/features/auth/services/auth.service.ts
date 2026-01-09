@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, tap, catchError, of } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { environment } from '../../../../environments/environment';
 
 declare var google: any;
 
@@ -39,7 +39,7 @@ export class AuthService {
    */
   isAuthenticated(): boolean {
     const token = this.authToken();
-    
+
     // Verificar si existe token
     if (!token) {
       //console.log('🔐 No hay token en memoria');
@@ -69,7 +69,7 @@ export class AuthService {
   initializeAuthState(): void {
     const token = localStorage.getItem('authToken');
     const userData = localStorage.getItem('userData');
-    
+
     //console.log('🔐 Inicializando estado de autenticación...');
 
     if (token && userData) {
@@ -102,7 +102,7 @@ export class AuthService {
     });*/
 
     return this.http.post<AuthResponse>(
-      `${this.apiUrl}/auth/google/`, 
+      `${this.apiUrl}/auth/google/`,
       { access_token: jwtToken },
       { headers }
     ).pipe(
@@ -131,7 +131,7 @@ export class AuthService {
     // Guardar en localStorage para persistencia
     localStorage.setItem('authToken', token);
     localStorage.setItem('userData', JSON.stringify(user));
-    
+
     // Actualizar signals
     this.authToken.set(token);
     this.currentUser.set(user);
@@ -145,11 +145,11 @@ export class AuthService {
 
   logout(): void {
     //console.log('🔐 Cerrando sesión...');
-    
+
     const userEmail = this.currentUser()?.email;
 
     this.clearAuthData();
-    
+
     // Cerrar sesión de Google
     if (window.google?.accounts?.id) {
       if (userEmail) {
@@ -188,10 +188,10 @@ export class AuthService {
   getUserInitials(): string {
     const user = this.currentUser();
     if (!user) return 'U';
-    
+
     const firstName = user.first_name?.charAt(0) || '';
     const lastName = user.last_name?.charAt(0) || '';
-    
+
     return (firstName + lastName).toUpperCase() || 'U';
   }
 

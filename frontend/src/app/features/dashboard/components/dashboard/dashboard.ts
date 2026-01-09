@@ -1,7 +1,8 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterModule } from '@angular/router';
-import { AuthService } from '../../services/auth';
+import { FormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { AuthService } from '../../../auth/services/auth.service';
 
 interface MenuItem {
   label: string;
@@ -13,7 +14,7 @@ interface MenuItem {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css']
 })
@@ -51,7 +52,7 @@ export class DashboardComponent implements OnInit {
 
   private initializeDashboard(): void {
     const user = this.authService.getCurrentUser();
-    
+
     if (!user) {
       this.router.navigate(['/login']);
       return;
@@ -59,7 +60,7 @@ export class DashboardComponent implements OnInit {
 
     this.currentUser.set(user);
     this.isLoading.set(false);
-    
+
     //console.log('✅ Dashboard inicializado para:', user.email);
   }
 
